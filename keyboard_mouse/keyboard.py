@@ -22,18 +22,21 @@ class Monitor(object):
         self.hookman.HookKeyboard()
         self._last_key = None
 
-    def start(self):
+    def start(self, daemon=None):
+        if daemon is not None:
+            self.hookman.daemon = daemon
         self.hookman.start()
 
     def stop(self):
-        if self.is_running():
+        if self.hookman.is_alive():
             self.hookman.cancel()
 
     def is_running(self):
-        return self.parameters["running"]
+        return self.hookman.is_alive()
 
     @classmethod
     def is_caps_lock_on():
+        """Check if caps lock is on or off. Return True if on, False if off."""
         result = subprocess.run(["xset", "-q"], capture_output=True, text=True)
         lines = result.stdout.split("\n")
         for line in lines:
@@ -47,9 +50,8 @@ class Monitor(object):
         print(event)
         # If the ascii value matches spacebar, terminate the while loop
         # ascii = ord('a')  # 32 means space
-        self._last_key = event.Ascii
-        if event.Ascii == ord(" "):
-            params["running"] = False
+        self._last_key = event.Key
+        if event.Key == "Escape":  # ESC键
             self.stop()
 
     def get_last_key(self):
@@ -60,8 +62,9 @@ class Monitor(object):
 
 
 if __name__ == "__main__":
+    import time
+
     monitor = Monitor()
     monitor.start()
     while monitor.is_running():
-        print("last key is:", monitor.get_last_key())
-    print("Bye")
+        time.sleep(1)
